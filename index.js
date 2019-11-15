@@ -8,7 +8,7 @@ brushCanvas.width = 50;
 brushCanvas.height = 50;
 
 let isDrawing = false;
-let brushSize = 6;
+let brushSize = 4;
 let isEraser = false;
 
 let brushPos;
@@ -17,6 +17,12 @@ let brushColor = '#FFF';
 const colorOptions = ['#FFFFFF', '#CEFF00', '#00FF11', '#FF00E6', '#FF0000', '#00F6FF'];
 
 let graphicTabletModeEnabled = false;
+
+let snapshots = [];
+let currentSnapshot = -1;
+
+let canvasHeight = window.innerHeight;
+let canvasWidth = window.innerWidth;
 
 function resizeCanvas() {
     const bufferCanvas = document.createElement('canvas');
@@ -27,8 +33,8 @@ function resizeCanvas() {
 
     bufferCtx.drawImage(canvas, 0, 0);
 
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
 
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -37,7 +43,19 @@ function resizeCanvas() {
     bufferCanvas.remove();
 }
 
-window.addEventListener('resize', resizeCanvas, false);
+window.addEventListener('resize', () => {
+    resizeCanvas(
+        Math.max(window.innerWidth, canvasWidth),
+        Math.max(window.innerHeight, canvasHeight)
+    );
+}, false);
+
+window.addEventListener('scroll', () => {
+    canvasWidth += Math.max(0, window.innerWidth + window.scrollX - canvasWidth);
+    canvasHeight += Math.max(0, window.innerHeight + window.scrollY - canvasHeight);
+
+    resizeCanvas();
+}, false);
 
 resizeCanvas();
 
@@ -61,24 +79,53 @@ function drawBrushPreview() {
 }
 drawBrushPreview();
 
+function makeSnapshot() {
+    const bufferCanvas = document.createElement('canvas');
+    bufferCtx = bufferCanvas.getContext('2d');
+
+    bufferCanvas.width = canvas.width;
+    bufferCanvas.height = canvas.height;
+
+    bufferCtx.drawImage(canvas, 0, 0);
+
+    snapshots.splice(currentSnapshot + 1, snapshots.length, bufferCanvas);
+    currentSnapshot++;
+
+    console.log(snapshots, currentSnapshot);
+}
+makeSnapshot();
+
+function moveToRelativeSnapshot(dS) {
+    let relativeSnap = currentSnapshot + dS;
+    if (relativeSnap < snapshots.length && relativeSnap >= 0) {
+        currentSnapshot += dS;
+        console.log(snapshots, currentSnapshot);
+
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.drawImage(snapshots[currentSnapshot], 0, 0);
+    }
+}
+
 document.addEventListener('keydown', e => {
     if (e.shiftKey) isDrawing = true;
 
     switch (e.key) {
         case 'p':
-            brushSize += 3;
+            brushSize += 2;
             break;
         case 'm':
-            brushSize = Math.max(3, brushSize - 3);
+            brushSize = Math.max(2, brushSize - 2);
             break;
         case 'e':
             isEraser = !isEraser;
             break;
         case 's':
-            const imageData = canvas.toDataURL('image/png').replace('image/png', 'image/octet-stream');
+            const imageData = canvas.toDataURL('image/jpeg').replace('image/jpeg', 'image/octet-stream');
 
             const anchor = document.createElement('a');
-            anchor.setAttribute('download', 'sketch.png');
+            anchor.setAttribute('download', 'sketch.jpg');
             anchor.setAttribute('href', imageData);
             anchor.click();
 
@@ -88,6 +135,12 @@ document.addEventListener('keydown', e => {
             break;
         case 'g':
             graphicTabletModeEnabled = !graphicTabletModeEnabled;
+            break;
+        case 'u':
+            moveToRelativeSnapshot(-1);
+            break;
+        case 'r':
+            moveToRelativeSnapshot(1);
             break;
         case '1':
         case '2':
@@ -103,8 +156,11 @@ document.addEventListener('keydown', e => {
 }, false);
 
 document.addEventListener('keyup', () => {
-    isDrawing = false;
+    if (isDrawing) {
+        makeSnapshot();
+    }
 
+    isDrawing = false;
     brushPos = undefined;
 }, false);
 
@@ -143,18 +199,15 @@ document.addEventListener('mousemove', e => {
     }
 });
 
-let lineStart = [0, 0];
 canvas.addEventListener('mousedown', e => {
     if (graphicTabletModeEnabled) {
         isDrawing = true;
     } else {
-        const x = e.clientX;
-        const y = e.clientY;
+        const x = e.pageX;
+        const y = e.pageY;
 
         ctx.beginPath();
         ctx.moveTo(x, y);
-
-        lineStart = [x, y];
     }
 });
 
@@ -163,11 +216,13 @@ canvas.addEventListener('mouseup', e => {
         isDrawing = false;
         brushPos = undefined;
     } else {
-        ctx.lineTo(e.clientX, e.clientY);
+        ctx.lineTo(e.pageX, e.pageY);
         ctx.closePath();
 
         ctx.lineWidth = brushSize;
         ctx.strokeStyle = brushColor;
         ctx.stroke();
+
     }
+    makeSnapshot();
 });

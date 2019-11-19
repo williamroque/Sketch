@@ -9,7 +9,7 @@ brushCanvas.height = 50;
 
 let isDrawing = false;
 let brushSize = 4;
-let pressureWeight = 2;
+let pressureWeight = 1;
 let isEraser = false;
 let isWritingBrush = false;
 
@@ -125,10 +125,10 @@ document.addEventListener('keydown', e => {
             brushSize = Math.max(2, brushSize - 2);
             break;
         case '[':
-            pressureWeight /= 2;
+            pressureWeight -= 1;
             break;
         case ']':
-            pressureWeight *= 2;
+            pressureWeight = Math.max(0, pressureWeight + 1);
             break;
         case 'e':
             isEraser = !isEraser;

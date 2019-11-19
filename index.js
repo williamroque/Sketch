@@ -9,7 +9,9 @@ brushCanvas.height = 50;
 
 let isDrawing = false;
 let brushSize = 4;
+let pressureWeight = 2;
 let isEraser = false;
+let isWritingBrush = false;
 
 let brushPos;
 
@@ -20,6 +22,8 @@ let graphicTabletModeEnabled = false;
 
 let snapshots = [];
 let currentSnapshot = -1;
+
+let maxSnapshots = 50;
 
 let canvasHeight = window.innerHeight;
 let canvasWidth = window.innerWidth;
@@ -89,9 +93,12 @@ function makeSnapshot() {
     bufferCtx.drawImage(canvas, 0, 0);
 
     snapshots.splice(currentSnapshot + 1, snapshots.length, bufferCanvas);
-    currentSnapshot++;
 
-    console.log(snapshots, currentSnapshot);
+    if (currentSnapshot + 1 > maxSnapshots) {
+        snapshots.shift();
+    }
+
+    currentSnapshot = Math.min(currentSnapshot + 1, maxSnapshots);
 }
 makeSnapshot();
 
@@ -99,7 +106,6 @@ function moveToRelativeSnapshot(dS) {
     let relativeSnap = currentSnapshot + dS;
     if (relativeSnap < snapshots.length && relativeSnap >= 0) {
         currentSnapshot += dS;
-        console.log(snapshots, currentSnapshot);
 
         ctx.fillStyle = '#000';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -118,6 +124,12 @@ document.addEventListener('keydown', e => {
         case 'm':
             brushSize = Math.max(2, brushSize - 2);
             break;
+        case '[':
+            pressureWeight /= 2;
+            break;
+        case ']':
+            pressureWeight *= 2;
+            break;
         case 'e':
             isEraser = !isEraser;
             break;
@@ -135,6 +147,9 @@ document.addEventListener('keydown', e => {
             break;
         case 'g':
             graphicTabletModeEnabled = !graphicTabletModeEnabled;
+            break;
+        case 'w':
+            isWritingBrush = !isWritingBrush;
             break;
         case 'u':
             moveToRelativeSnapshot(-1);
@@ -164,15 +179,23 @@ document.addEventListener('keyup', () => {
     brushPos = undefined;
 }, false);
 
-function drawBrush(x, y) {
+function drawBrush(x, y, adjustedBrushSize) {
     ctx.fillStyle = isEraser ? '#000' : brushColor;
+
     ctx.beginPath();
-    ctx.arc(x, y, brushSize, 0, 2 * Math.PI);
+    if (isWritingBrush) {
+        ctx.moveTo(x, y);
+        ctx.lineTo(x, y + adjustedBrushSize);
+        ctx.lineTo(x + adjustedBrushSize, y);
+        ctx.lineTo(x + adjustedBrushSize, y - adjustedBrushSize);
+    } else {
+        ctx.arc(x, y, adjustedBrushSize, 0, 2 * Math.PI);
+    }
     ctx.closePath();
     ctx.fill();
 }
 
-document.addEventListener('mousemove', e => {
+document.addEventListener('pointermove', e => {
     if (isDrawing) {
         if (brushPos) {
             const dx = Math.abs(e.pageX - brushPos[0]);
@@ -188,11 +211,16 @@ document.addEventListener('mousemove', e => {
             for (let i = 0; i < [dx, dy][gPosDiff]; i++) {
                 drawBrush(
                     ((gPosDiff ? dx / dy * i : i) || 0) * direction[0] + brushPos[0],
-                    ((gPosDiff ? i : dy / dx * i) || 0) * direction[1] + brushPos[1]
+                    ((gPosDiff ? i : dy / dx * i) || 0) * direction[1] + brushPos[1],
+                    brushSize + Math.pow(brushSize * e.pressure, 1 + pressureWeight)
                 );
             }
         } else {
-            drawBrush(e.pageX, e.pageY);
+            drawBrush(
+                e.pageX,
+                e.pageY,
+                brushSize + Math.pow(brushSize * e.pressure, 1 + pressureWeight)
+            );
         }
         
         brushPos = [e.pageX, e.pageY];

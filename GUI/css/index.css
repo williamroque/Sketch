@@ -1,0 +1,24 @@
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background: #343434;
+    cursor: crosshair;
+}
+
+#titlebar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 25px;
+    -webkit-app-region: drag;
+}
+
+#action-board {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    background: #343434;
+}

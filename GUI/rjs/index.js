@@ -1,4 +1,4 @@
-const canvas = document.querySelector('#draw-canvas');
+const canvas = document.querySelector('#action-board');
 const ctx = canvas.getContext('2d');
 
 const brushCanvas = document.querySelector('#brush-canvas');
@@ -17,6 +17,8 @@ let brushPos;
 
 let brushColor = '#FFF';
 const colorOptions = ['#FFFFFF', '#CEFF00', '#00FF11', '#FF00E6', '#FF0000', '#00F6FF'];
+
+const backgroundColor = '#343434';
 
 let graphicTabletModeEnabled = false;
 
@@ -40,7 +42,7 @@ function resizeCanvas() {
     canvas.width = canvasWidth;
     canvas.height = canvasHeight;
 
-    ctx.fillStyle = '#000';
+    ctx.fillStyle = backgroundColor;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     ctx.drawImage(bufferCanvas, 0, 0);
@@ -74,10 +76,10 @@ function drawBrushPreview() {
     brushCtx.closePath();
 
     if (isEraser) {
-        brushCtx.strokeStyle = isEraser ? brushColor : '#000';
+        brushCtx.strokeStyle = isEraser ? brushColor : backgroundColor;
         brushCtx.stroke();
     } else {
-        brushCtx.fillStyle = isEraser ? '#000' : brushColor;
+        brushCtx.fillStyle = isEraser ? backgroundColor : brushColor;
         brushCtx.fill();
     }
 }
@@ -107,7 +109,7 @@ function moveToRelativeSnapshot(dS) {
     if (relativeSnap < snapshots.length && relativeSnap >= 0) {
         currentSnapshot += dS;
 
-        ctx.fillStyle = '#000';
+        ctx.fillStyle = backgroundColor;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         ctx.drawImage(snapshots[currentSnapshot], 0, 0);
@@ -180,7 +182,7 @@ document.addEventListener('keyup', () => {
 }, false);
 
 function drawBrush(x, y, adjustedBrushSize) {
-    ctx.fillStyle = isEraser ? '#000' : brushColor;
+    ctx.fillStyle = isEraser ? backgroundColor : brushColor;
 
     ctx.beginPath();
     if (isWritingBrush) {
